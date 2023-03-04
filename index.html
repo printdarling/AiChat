@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>chatGPT聊天</title>
+    <script src="./jquery-3.6.3.js"></script>
+    <script src="./markdown-it.js"></script>
+    <style>
+        .main {
+            width: 500px;
+            height: 800px;
+        }
+
+        div.container {
+            display: block;
+            width: 600px;
+            height: 800px;
+            background-color: #999;
+            position: absolute;
+            left: 0;
+            right: 0;
+            margin: auto;
+            overflow-y: scroll;
+        }
+
+        div.container::after {
+            /*添加一个内容*/
+            content: "";
+            /*转换为一个块元素*/
+            display: block;
+            /*清除两侧的浮动*/
+            clear: both;
+        }
+
+        ul {
+            list-style: none;
+            margin-left: -40px;
+            font-size: 20px;
+        }
+
+        ul > li {
+            display: block;
+            width: 470px;
+            border: 1px solid black;
+            border-radius: 10px;
+            color: #000;
+        }
+
+        ul li.left {
+            float: left;
+            background-color: cornsilk;
+            /* background-color: rgb(213, 191, 175); */
+        }
+
+        ul li.right {
+            float: right;
+            background-color: #15c13a;
+        }
+
+        div.ipt {
+            width: 600px;
+            height: 48px;
+            margin: 0 auto;
+            margin-top: 10px;
+        }
+
+        div.ipt input {
+            display: block;
+            width: 540px;
+            height: 40px;
+            float: left;
+        }
+
+        div.ipt button {
+            display: block;
+            float: right;
+            margin-top: 5px;
+            margin-right: 5px;
+            width: 40px;
+            height: 40px;
+            border-radius: 40%;
+        }
+        pre {
+            font-size: 14px;
+            /* background-color: cornsilk; */
+            background-color: rgb(213, 191, 175);
+            padding: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main">
+        <div class="container">
+            <ul id="chats">
+            </ul>
+        </div>
+    </div>
+    <div class="ipt">
+        <input type="text" id="txt">
+        <button id="btn">发送</button>
+    </div>
+
+    <script>
+        window.onload = function () {
+            var key = prompt('请输入您的key:', );
+            var btn = document.getElementById("btn");
+            var chats = document.getElementById("chats");
+            var txt = document.getElementById("txt");
+            var container = document.querySelector(".container");
+
+            //markdown格式化库
+            var md = window.markdownit();
+
+            md.set({
+                html: true, // 允许 html 标签
+                breaks: true, // 自动换行
+                typographer: true // 启用排版
+            });
+
+            var messages = [];
+
+            txt.onkeydown = function (event) {
+                if (event.keyCode == 13) {
+                    send();
+                }
+            };
+            btn.onclick = send;
+
+            function send() {
+                console.log("send被调用");
+                var value = txt.value;
+                txt.value = '';
+
+                console.log(value);
+                if (value != '') {
+                    let li = document.createElement("li");
+                    li.innerHTML = md.render(value);
+                    li.className = 'right';
+                    chats.append(li);
+                    container.scrollTop = container.scrollHeight + 48;
+                    messages.push({ role: "user", content: value });
+                }
+
+                $.ajax({
+                    url: 'https://api.openai.com/v1/chat/completions',
+                    type: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': "Bearer "+key
+                    },
+                    data: JSON.stringify({
+                        "model": "gpt-3.5-turbo",
+                        "messages": messages
+                    }),
+                    success: function (response) {
+
+                        let li = document.createElement("li");
+                        var str = response.choices[0].message.content;
+                        li.innerHTML = md.render(str);
+                        li.className = 'left';
+                        chats.append(li);
+                        container.scrollTop = container.scrollHeight + 48;
+                        messages.push({ role: "assistant", content: str });
+                    },
+                    error:function(){
+                        alert("您的key有误，请刷新网页重新输入！");
+                    }
+                })
+            }
+
+        }
+    </script>
+</body>
+
+</html>
